@@ -33,6 +33,9 @@ jobs:
         run: npm run build
       - name: 配置 Pages
         uses: actions/configure-pages@v5
+        with:
+          # 首次部署自动创建 Pages 站点（GITHUB_TOKEN 具备 pages:write）
+          enablement: true
       - name: 上传构建产物
         uses: actions/upload-pages-artifact@v3
         with:
