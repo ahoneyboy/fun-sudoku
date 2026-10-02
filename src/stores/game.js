@@ -12,11 +12,12 @@ import { defineStore } from 'pinia';
 import {
   DIFFS,
   generate,
+  generateSeeded,
   encode,
   decode,
   signature,
 } from '../core/sudoku';
-import { uuid } from '../core/format';
+import { todayKey, uuid } from '../core/format';
 import { sfx } from '../core/audio';
 import { db } from './db';
 import { useSettingsStore } from './settings';
@@ -75,6 +76,9 @@ export const useGameStore = defineStore('game', {
     puzzle: [], // 题面（0=空格），给定数字不可改
     solution: [], // 唯一终盘
     user: [], // 用户当前填的数字（0=未填）
+    notes: [], // 铅笔笔记：每格一个有序数字数组
+    noteMode: false, // 笔记模式开关（开启后点数字=记候选数）
+    history: [], // 撤销栈：每次改盘前的完整快照
     errors: [], // 实时标红位（含检查标红）
     errorCounted: [], // 同格连错去重位：改对后才重置
     selected: -1,
@@ -83,6 +87,7 @@ export const useGameStore = defineStore('game', {
     hintsUsed: 0, // 本局已用提示（计入星级）
     sig: '', // 本题指纹（错题收录/重练移除用）
     redoMode: false, // 是否错题重练局
+    dailyMode: false, // 是否每日挑战局
     finished: false, // 通关（WinModal 显隐）
     showTime: true, // 顶栏计时显隐（隐藏后后台仍在计时）
     // 计时：片段累计制 —— accumMs 存已完成片段，startAt 为当前片段起点，
@@ -125,14 +130,16 @@ export const useGameStore = defineStore('game', {
       }
       return out;
     },
+    /** 是否有可撤销的步骤 */
+    canUndo: (s) => s.history.length > 0,
   },
 
   actions: {
     /**
-     * 开一局新题（或按 sig 重练错题）
-     * @param {{diff?: string, sig?: string}} opts
+     * 开一局新题（或按 sig 重练错题 / 按 daily 进入每日挑战）
+     * @param {{diff?: string, sig?: string, daily?: boolean}} opts
      */
-    async newGame({ diff = 'easy4', sig = '' } = {}) {
+    async newGame({ diff = 'easy4', sig = '', daily = false } = {}) {
       const wrongbook = useWrongbookStore();
       this.stopTimer();
 
@@ -148,6 +155,11 @@ export const useGameStore = defineStore('game', {
         puzzle = decode(item.puzzle);
         solution = decode(item.solution);
         redoMode = true;
+      } else if (daily) {
+        // 每日挑战：按"日期+难度"做种子，同一天所有人拿到同一道题
+        const g = generateSeeded(diffKey, `daily-${todayKey()}-${diffKey}`);
+        puzzle = g.puzzle;
+        solution = g.solution;
       } else {
         // 优先级 2：缓存池 FIFO；优先级 3：现场生成兜底（<5ms）
         const cached = await takeFromPool(diffKey);
@@ -166,6 +178,9 @@ export const useGameStore = defineStore('game', {
         puzzle,
         solution,
         user: new Array(n2).fill(0),
+        notes: Array.from({ length: n2 }, () => []),
+        noteMode: false,
+        history: [],
         errors: new Array(n2).fill(false),
         errorCounted: new Array(n2).fill(false),
         selected: -1,
@@ -174,6 +189,7 @@ export const useGameStore = defineStore('game', {
         hintsUsed: 0,
         sig: item ? item.sig : signature(diffKey, puzzle),
         redoMode,
+        dailyMode: daily && !item,
         // showTime 是用户偏好，跨局保留，不在 $patch 里重置
         accumMs: 0,
         startAt: Date.now(),
@@ -189,6 +205,9 @@ export const useGameStore = defineStore('game', {
       if (!this.active) return;
       const n2 = this.size * this.size;
       this.user = new Array(n2).fill(0);
+      this.notes = Array.from({ length: n2 }, () => []);
+      this.noteMode = false;
+      this.history = [];
       this.errors = new Array(n2).fill(false);
       this.errorCounted = new Array(n2).fill(false);
       this.selected = -1;
@@ -201,6 +220,107 @@ export const useGameStore = defineStore('game', {
       this.nowMs = this.startAt;
       this.running = true;
       this.startTimer();
+    },
+
+    // ---------- 撤销与铅笔笔记 ----------
+
+    /** 改盘前压入完整快照（含失误/提示计数，撤销可整体回退） */
+    pushHistory() {
+      this.history.push({
+        user: this.user.slice(),
+        notes: this.notes.map((n) => n.slice()),
+        errors: this.errors.slice(),
+        errorCounted: this.errorCounted.slice(),
+        mistakes: this.mistakes,
+        hintsLeft: this.hintsLeft,
+        hintsUsed: this.hintsUsed,
+      });
+      // 防爆栈：容量足够回溯整局
+      if (this.history.length > 300) this.history.shift();
+    },
+
+    /** 撤销最近一次改盘（填数/擦除/提示/笔记） */
+    undo() {
+      if (!this.active || this.finished) return;
+      const ui = useUiStore();
+      const snap = this.history.pop();
+      if (!snap) {
+        ui.toast('已经在最开始啦，没有步骤可撤销', 'info');
+        return;
+      }
+      this.$patch({
+        user: snap.user,
+        notes: snap.notes,
+        errors: snap.errors,
+        errorCounted: snap.errorCounted,
+        mistakes: snap.mistakes,
+        hintsLeft: snap.hintsLeft,
+        hintsUsed: snap.hintsUsed,
+      });
+      if (useSettingsStore().sound) sfx.tap();
+    },
+
+    /** 切换铅笔笔记模式 */
+    toggleNoteMode() {
+      if (!this.active || this.finished) return;
+      this.noteMode = !this.noteMode;
+      if (useSettingsStore().sound) sfx.tap();
+    },
+
+    /** 在选中空格切换一条候选数笔记 */
+    toggleNoteDigit(v) {
+      const ui = useUiStore();
+      const idx = this.selected;
+      if (idx < 0) {
+        ui.toast('先点一个格子，再记笔记哦', 'info');
+        return;
+      }
+      if (this.puzzle[idx] !== 0) {
+        ui.toast('题目给出的格子不需要笔记哦', 'info');
+        return;
+      }
+      if (this.user[idx] !== 0) {
+        ui.toast('这格已经填了数字，先擦除再记笔记吧', 'info');
+        return;
+      }
+      this.pushHistory();
+      const list = this.notes[idx];
+      const at = list.indexOf(v);
+      if (at === -1) {
+        list.push(v);
+        list.sort((a, b) => a - b);
+      } else {
+        list.splice(at, 1);
+      }
+      if (useSettingsStore().sound) sfx.tap();
+    },
+
+    /** 填入数字后自动清理：本格笔记清空，同行/列/宫笔记中的该数字划掉 */
+    cleanupNotes(idx, v) {
+      this.notes[idx] = [];
+      const n = this.size;
+      const r = Math.floor(idx / n);
+      const c = idx % n;
+      const cfgBoxW = n === 4 ? 2 : 3;
+      const cfgBoxH = n === 9 ? 3 : 2;
+      const br = Math.floor(r / cfgBoxH) * cfgBoxH;
+      const bc = Math.floor(c / cfgBoxW) * cfgBoxW;
+      const peers = new Set();
+      for (let i = 0; i < n; i++) {
+        peers.add(r * n + i);
+        peers.add(i * n + c);
+      }
+      for (let dr = 0; dr < cfgBoxH; dr++) {
+        for (let dc = 0; dc < cfgBoxW; dc++) {
+          peers.add((br + dr) * n + (bc + dc));
+        }
+      }
+      peers.delete(idx);
+      peers.forEach((p) => {
+        if (this.puzzle[p] !== 0) return;
+        const at = this.notes[p].indexOf(v);
+        if (at !== -1) this.notes[p].splice(at, 1);
+      });
     },
 
     /** 放弃当前局（恢复出厂等场景调用） */
@@ -251,7 +371,7 @@ export const useGameStore = defineStore('game', {
       this.selected = idx;
     },
 
-    /** 键盘/数字键盘统一入口：往选中格填 v */
+    /** 键盘/数字键盘统一入口：往选中格填 v（笔记模式下记候选数） */
     inputDigit(v) {
       if (!this.active || this.finished) return;
       const settings = useSettingsStore();
@@ -261,11 +381,25 @@ export const useGameStore = defineStore('game', {
         ui.toast('先点一个格子，再选数字哦', 'info');
         return;
       }
+      // 笔记模式：只在空格上记候选数，不做正误判断
+      if (this.noteMode) {
+        if (this.puzzle[idx] !== 0) {
+          ui.toast('题目给出的数字，不需要记笔记哦', 'info');
+          return;
+        }
+        if (this.user[idx] !== 0) {
+          ui.toast('这格已经填了数字，先擦除再记笔记吧', 'info');
+          return;
+        }
+        this.toggleNoteDigit(v);
+        return;
+      }
       if (this.puzzle[idx] !== 0) {
         ui.toast('这是题目给出的数字，不能修改哦', 'info');
         return;
       }
       if (this.user[idx] === v) return; // 重复填同一个数：忽略
+      this.pushHistory();
       this.user[idx] = v;
 
       const ok = v === this.solution[idx];
@@ -289,6 +423,10 @@ export const useGameStore = defineStore('game', {
         sfx.tap();
       }
 
+      // 填对时顺手做笔记清理：本格清空 + 同区候选数划掉（只清"确属正确"的数，
+      // 填错不清理，撤销/擦除后笔记不丢）
+      if (ok) this.cleanupNotes(idx, v);
+
       // 填满判断必须用合并盘面：给定格的 user 恒为 0，只看 user 会漏判
       if (this.isMergedFull) this.autoJudge();
     },
@@ -306,9 +444,11 @@ export const useGameStore = defineStore('game', {
         ui.toast('题目给出的数字不能擦除哦', 'info');
         return;
       }
-      if (this.user[idx] === 0 && !this.errors[idx]) return;
+      if (this.user[idx] === 0 && !this.errors[idx] && !(this.notes[idx] && this.notes[idx].length)) return;
+      this.pushHistory();
       this.user[idx] = 0;
       this.errors[idx] = false;
+      this.notes[idx] = [];
       // 注意：errorCounted 不重置 —— 只有"改对"才重新计数，擦掉再错仍是同一轮失误
       if (useSettingsStore().sound) sfx.tap();
     },
@@ -337,9 +477,11 @@ export const useGameStore = defineStore('game', {
       }
       const idx = cands[Math.floor(Math.random() * cands.length)];
       const v = this.solution[idx];
+      this.pushHistory();
       this.user[idx] = v;
       this.errors[idx] = false;
       this.errorCounted[idx] = false; // 提示把格子改对了：重置连错计数
+      this.notes[idx] = [];
       this.hintsLeft--;
       this.hintsUsed++;
       this.selected = idx;
@@ -463,14 +605,15 @@ export const useGameStore = defineStore('game', {
       if (settings.sound) sfx.err();
     },
 
-    /**
-     * 通关结算：冻结计时 → 写做题记录 → 错题重练则移出错题本
-     */
-    finish() {
+  /**
+   * 通关结算：冻结计时 → 写做题记录 → 每日挑战记连胜 → 错题重练移出错题本
+   */
+  finish() {
       this.pauseTimer();
       this.stopTimer();
       this.finished = true;
-      useRecordsStore().addRecord({
+      const records = useRecordsStore();
+      records.addRecord({
         id: uuid(),
         diffKey: this.diffKey,
         sec: this.elapsedSec,
@@ -479,6 +622,9 @@ export const useGameStore = defineStore('game', {
         hintsUsed: this.hintsUsed,
         finishedAt: Date.now(),
       });
+      if (this.dailyMode) {
+        records.markDaily(todayKey(), this.diffKey); // 连胜与成就的数据源
+      }
       if (this.redoMode) {
         useWrongbookStore().remove(this.sig); // 重练成功，自动移出错题本
       }

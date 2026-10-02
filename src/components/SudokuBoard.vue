@@ -19,6 +19,7 @@ const props = defineProps({
   puzzle: { type: Array, required: true }, // 题面（0=空）
   user: { type: Array, required: true }, // 用户填的数（0=空）
   errors: { type: Array, required: true }, // 错误标红位
+  notes: { type: Array, default: () => [] }, // 每格铅笔笔记（数字数组）
   selected: { type: Number, default: -1 },
 });
 const emit = defineEmits(['select']);
@@ -117,12 +118,37 @@ function displayValue(idx) {
   return props.puzzle[idx] || props.user[idx] || '';
 }
 
+/** 该格是否展示铅笔笔记：未填数且有笔记时展示 */
+function noteList(idx) {
+  if ((props.puzzle[idx] || props.user[idx]) !== 0) return [];
+  return props.notes[idx] || [];
+}
+
+/**
+ * 四角格子外圆角：与外框内缘半径（22px 外框 - 5px 内边距 = 17px）对齐。
+ * 修复白格直角顶出紫色圆角边框的观感问题。
+ */
+function cornerClass(idx) {
+  const n = props.size;
+  const r = Math.floor(idx / n);
+  const c = idx % n;
+  const last = n - 1;
+  if (r === 0 && c === 0) return 'rounded-tl-[17px]';
+  if (r === 0 && c === last) return 'rounded-tr-[17px]';
+  if (r === last && c === 0) return 'rounded-bl-[17px]';
+  if (r === last && c === last) return 'rounded-br-[17px]';
+  return '';
+}
+
 function ariaLabel(idx) {
   const n = props.size;
   const r = Math.floor(idx / n) + 1;
   const c = (idx % n) + 1;
   const v = displayValue(idx);
-  return v ? `第${r}行第${c}列，值 ${v}` : `第${r}行第${c}列，空格`;
+  const tag = noteList(idx).length ? '，有笔记' : '';
+  return v
+    ? `第${r}行第${c}列，值 ${v}`
+    : `第${r}行第${c}列，空格${tag}`;
 }
 
 // ---- 字号自适应：同步首测 + ResizeObserver/resize 双通道更新 ----
@@ -167,7 +193,7 @@ watch(() => props.size, () => measure());
   >
     <!-- 单层 grid：行列均分且 minmax(0,1fr) 封死最小尺寸，格子恒为正方形 -->
     <div
-      class="grid aspect-square w-full gap-0 rounded-[14px] bg-[#F3EDFC]"
+      class="grid aspect-square w-full gap-0 rounded-[17px] bg-[#F3EDFC]"
       :style="{
         gridTemplateColumns: `repeat(${size}, minmax(0, 1fr))`,
         gridTemplateRows: `repeat(${size}, minmax(0, 1fr))`,
@@ -177,13 +203,21 @@ watch(() => props.size, () => measure());
         v-for="idx in total"
         :key="`${idx - 1}-${user[idx - 1]}`"
         type="button"
-        class="flex min-w-0 min-h-0 items-center justify-center rounded-[4px] font-bold leading-none cursor-pointer select-none transition-colors duration-100 active:scale-95"
-        :class="[cellClass(idx - 1), edgeClass(idx - 1)]"
+        class="relative flex min-w-0 min-h-0 items-center justify-center overflow-hidden rounded-[4px] font-bold leading-none cursor-pointer select-none transition-colors duration-100 active:scale-95"
+        :class="[cellClass(idx - 1), edgeClass(idx - 1), cornerClass(idx - 1)]"
         :style="{ fontSize: cellFont + 'px' }"
         :aria-label="ariaLabel(idx - 1)"
         @click="emit('select', idx - 1)"
       >
-        {{ displayValue(idx - 1) }}
+        <span v-if="displayValue(idx - 1)">{{ displayValue(idx - 1) }}</span>
+        <!-- 铅笔笔记：小号淡紫数字 -->
+        <span
+          v-else-if="noteList(idx - 1).length"
+          class="pointer-events-none absolute inset-0 flex flex-wrap items-center justify-center gap-x-[0.14em] overflow-hidden font-bold leading-none text-lilac-deep/70"
+          style="font-size: 0.36em"
+        >
+          <span v-for="d in noteList(idx - 1)" :key="d">{{ d }}</span>
+        </span>
       </button>
     </div>
   </div>

@@ -13,6 +13,8 @@ defineProps({
   mistakes: { type: Number, required: true },
   hintsUsed: { type: Number, required: true },
   redo: { type: Boolean, default: false }, // 错题重练通关：特别祝贺
+  daily: { type: Boolean, default: false }, // 每日挑战通关
+  streak: { type: Number, default: 0 },
 });
 const emit = defineEmits(['again', 'home']);
 </script>
@@ -48,9 +50,11 @@ const emit = defineEmits(['again', 'home']);
             {{
               redo
                 ? '重练成功，这道题已经自动移出错题本咯'
-                : stars === 3
-                  ? '零失误零提示，完美通关！'
-                  : '又进步了一点点，继续加油！'
+                : daily
+                  ? `每日挑战完成，已连续打卡 ${streak} 天！`
+                  : stars === 3
+                    ? '零失误零提示，完美通关！'
+                    : '又进步了一点点，继续加油！'
             }}
           </p>
 

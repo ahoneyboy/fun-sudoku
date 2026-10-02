@@ -15,7 +15,9 @@
 /** 难度参数表（必须与产品规格精确一致） */
 export const DIFFS = {
   easy4: { label: '四宫入门', size: 4, holes: 8, hints: 3, tone: 'mint', desc: '2×2 宫，8 个空格' },
+  hard4: { label: '四宫困难', size: 4, holes: 10, hints: 3, tone: 'blossom', desc: '2×2 宫，10 个空格' },
   easy6: { label: '六宫简单', size: 6, holes: 14, hints: 3, tone: 'butter', desc: '2×3 宫，14 个空格' },
+  hard6: { label: '六宫困难', size: 6, holes: 20, hints: 3, tone: 'peach', desc: '2×3 宫，20 个空格' },
   normal9: { label: '九宫普通', size: 9, holes: 36, hints: 3, tone: 'azure', desc: '3×3 宫，36 个空格' },
   hard9: { label: '九宫困难', size: 9, holes: 50, hints: 3, tone: 'lilac', desc: '3×3 宫，50 个空格' },
 };
@@ -270,4 +272,32 @@ export function generate(diffKey, rand = Math.random) {
   const solution = generateFull(cfg, rand);
   const puzzle = digHoles(cfg, solution, d.holes, rand);
   return { diffKey, size: d.size, puzzle, solution, hints: d.hints };
+}
+
+/**
+ * 字符串种子 → [0,1) 随机数生成器（mulberry32，可复现）
+ */
+export function seededRandom(seedStr) {
+  // FNV-1a 把种子串压成 32 位整数
+  let h = 0x811c9dc5;
+  for (let i = 0; i < seedStr.length; i++) {
+    h ^= seedStr.charCodeAt(i);
+    h = Math.imul(h, 0x01000193);
+  }
+  let a = h >>> 0;
+  return function rand() {
+    a |= 0;
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+/**
+ * 按种子生成题目：同一种子必得同一题（每日挑战的基础——
+ * 同一天全世界的的小朋友拿到同一道题）
+ */
+export function generateSeeded(diffKey, seedStr) {
+  return generate(diffKey, seededRandom(seedStr));
 }

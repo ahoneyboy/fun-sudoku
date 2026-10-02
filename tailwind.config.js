@@ -13,6 +13,7 @@ export default {
         azure: { soft: '#E0EEFF', deep: '#3D6FB5' },
         lilac: { soft: '#EFE5FF', deep: '#7A55C0' },
         blossom: { soft: '#FFE4EA', deep: '#E05C75' },
+        peach: { soft: '#FFE8D2', deep: '#C25E3A' },
         // 数字三色：题目给定=深暖炭、用户填写=蓝、错误=红
         'user-blue': '#4E8DF5',
         'error-red': '#FF5A76',

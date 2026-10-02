@@ -107,6 +107,8 @@ export const useSettingsStore = defineStore('settings', {
       });
       await this.persist();
       records.list = [];
+      records.dailyLog = {};
+      records.seenAchievements = [];
       wrongbook.list = [];
       game.abandon();
     },

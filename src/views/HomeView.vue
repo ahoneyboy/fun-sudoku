@@ -9,6 +9,8 @@ import {
   Zap,
   Rocket,
   Flame,
+  Medal,
+  Crown,
   Play,
   BookX,
   GraduationCap,
@@ -30,7 +32,24 @@ const router = useRouter();
 const records = useRecordsStore();
 const wrongbook = useWrongbookStore();
 
-const DIFF_ICONS = { easy4: Sprout, easy6: Zap, normal9: Rocket, hard9: Flame };
+const DIFF_ICONS = {
+  easy4: Sprout,
+  hard4: Medal,
+  easy6: Zap,
+  hard6: Crown,
+  normal9: Rocket,
+  hard9: Flame,
+};
+
+// 每日挑战：按星期轮换难度（周一到周日固定顺序，同一张日历人人同题）
+const DIFF_KEYS = Object.keys(DIFFS);
+const dailyDiffKey = DIFF_KEYS[(new Date().getDay() + 6) % DIFF_KEYS.length];
+const dailyMeta = DIFFS[dailyDiffKey];
+
+const todayLabel = (() => {
+  const d = new Date();
+  return `${d.getMonth() + 1} 月 ${d.getDate()} 日`;
+})();
 
 // Tailwind JIT 需要字面量类名：难度配色静态映射
 const TONE = {
@@ -39,7 +58,12 @@ const TONE = {
   azure: 'bg-azure-soft text-azure-deep',
   lilac: 'bg-lilac-soft text-lilac-deep',
   blossom: 'bg-blossom-soft text-blossom-deep',
+  peach: 'bg-peach-soft text-peach-deep',
 };
+
+function goDaily() {
+  router.push({ path: '/game', query: { diff: dailyDiffKey, daily: '1' } });
+}
 
 function bestOf(key) {
   const b = records.bestByDiff[key];
@@ -85,10 +109,42 @@ function startGame(key) {
       </div>
     </section>
 
+    <!-- 每日挑战：按星期轮换难度，同一天全网同题，连胜激励 -->
+    <section
+      class="card overflow-hidden bg-peach-soft border border-[#F5D9BC] p-5 md:p-6 flex items-center gap-4"
+    >
+      <span
+        class="w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-white/80 text-peach-deep flex items-center justify-center shrink-0 animate-floaty"
+      >
+        <CalendarCheck class="w-7 h-7 md:w-8 md:h-8" />
+      </span>
+      <div class="flex-1 min-w-0">
+        <div class="font-black text-base md:text-lg">
+          每日挑战
+          <span class="pill bg-white/70 text-peach-deep ml-1">{{ todayLabel }}</span>
+        </div>
+        <p class="text-xs md:text-sm font-bold text-ink-soft mt-1">
+          今天的题目：{{ dailyMeta.label }}（{{ dailyMeta.desc }}）
+          <template v-if="records.streak > 0">
+            · 已连胜 <span class="text-peach-deep">{{ records.streak }}</span> 天
+          </template>
+        </p>
+      </div>
+      <button
+        type="button"
+        class="btn-candy shrink-0 px-4 md:px-6 py-2.5 md:py-3 text-sm md:text-base"
+        :class="records.todayDailyDone ? 'bg-white/80 text-peach-deep' : 'bg-peach-deep text-white'"
+        @click="goDaily"
+      >
+        <CalendarCheck class="w-4 h-4" />
+        {{ records.todayDailyDone ? '再玩一次' : '去挑战' }}
+      </button>
+    </section>
+
     <!-- 难度入口 -->
     <section>
       <h2 class="text-lg md:text-xl font-black mb-3 px-1">选个难度，出发！</h2>
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
         <button
           v-for="(d, key) in DIFFS"
           :key="key"

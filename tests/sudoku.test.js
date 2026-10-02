@@ -10,6 +10,8 @@ import { describe, it, expect } from 'vitest';
 import {
   DIFFS,
   generate,
+  generateSeeded,
+  seededRandom,
   getCfg,
   countSolutions,
   encode,
@@ -81,6 +83,22 @@ describe('数独引擎', () => {
     expect(signature('easy4', g1)).toBe(signature('easy4', g1));
     expect(signature('easy4', g1)).not.toBe(signature('easy4', g2));
     expect(signature('easy6', g1)).not.toBe(signature('easy4', g1));
+  });
+
+  it('种子生成可复现：同一种子必得同一题，不同种子得不同题', () => {
+    const a1 = generateSeeded('easy4', 'daily-2026-10-03-easy4');
+    const a2 = generateSeeded('easy4', 'daily-2026-10-03-easy4');
+    const b = generateSeeded('easy4', 'daily-2026-10-04-easy4');
+    expect(a1.puzzle).toEqual(a2.puzzle);
+    expect(a1.solution).toEqual(a2.solution);
+    expect(a1.puzzle).not.toEqual(b.puzzle);
+    // 种子随机器输出仍在 [0,1)
+    const rand = seededRandom('x');
+    for (let i = 0; i < 100; i++) {
+      const v = rand();
+      expect(v).toBeGreaterThanOrEqual(0);
+      expect(v).toBeLessThan(1);
+    }
   });
 
   it('countSolutions 边界：空盘多解返回 limit；非法盘面返回 0', () => {

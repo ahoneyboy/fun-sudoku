@@ -14,11 +14,18 @@ import {
   BarChart3,
   PieChart as PieChartIcon,
   LineChart as LineChartIcon,
+  Medal,
+  Crown,
+  Sparkles,
+  Target,
+  Layers,
+  Flame,
+  Lock,
 } from 'lucide-vue-next';
 import '../core/echarts'; // 按需注册副作用
 import { DIFFS } from '../core/sudoku';
 import { fmtTime } from '../core/format';
-import { useRecordsStore } from '../stores/records';
+import { useRecordsStore, ACHIEVEMENTS } from '../stores/records';
 import StatCard from '../components/StatCard.vue';
 import EmptyState from '../components/EmptyState.vue';
 
@@ -26,7 +33,14 @@ const records = useRecordsStore();
 const range = ref(7); // 柱状图时间窗：7 / 30 天
 
 // 难度主题色（与首页马卡龙一致）
-const DIFF_HEX = { easy4: '#2E8B62', easy6: '#B07E10', normal9: '#3D6FB5', hard9: '#7A55C0' };
+const DIFF_HEX = {
+  easy4: '#2E8B62',
+  hard4: '#E05C75',
+  easy6: '#B07E10',
+  hard6: '#C25E3A',
+  normal9: '#3D6FB5',
+  hard9: '#7A55C0',
+};
 const AXIS_LABEL = { color: '#9A8893', fontSize: 11, fontWeight: 'bold' };
 const SPLIT_LINE = { lineStyle: { color: '#F5EDE0' } };
 
@@ -137,7 +151,22 @@ const TONE = {
   butter: 'bg-butter-soft text-butter-deep',
   azure: 'bg-azure-soft text-azure-deep',
   lilac: 'bg-lilac-soft text-lilac-deep',
+  blossom: 'bg-blossom-soft text-blossom-deep',
+  peach: 'bg-peach-soft text-peach-deep',
 };
+
+// 成就墙：图标名 → 组件
+const ACH_ICONS = {
+  Medal,
+  Crown,
+  Sparkles,
+  Target,
+  Star,
+  Layers,
+  Flame,
+  CalendarCheck,
+};
+const unlockedIds = computed(() => records.unlockedAchievements.map((a) => a.id));
 
 onMounted(() => records.hydrate());
 </script>
@@ -244,5 +273,38 @@ onMounted(() => records.hydrate());
         </ul>
       </div>
     </div>
+
+    <!-- 成就墙 -->
+    <section v-if="records.hydrated">
+      <div class="flex items-center justify-between mb-3 px-1">
+        <h2 class="text-lg md:text-xl font-black">成就墙</h2>
+        <span class="pill bg-butter-soft text-butter-deep">
+          {{ unlockedIds.length }} / {{ ACHIEVEMENTS.length }}
+        </span>
+      </div>
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+        <div
+          v-for="a in ACHIEVEMENTS"
+          :key="a.id"
+          class="card p-4 flex flex-col items-center text-center gap-2"
+          :class="unlockedIds.includes(a.id) ? '' : 'opacity-70'"
+        >
+          <span
+            class="w-12 h-12 rounded-2xl flex items-center justify-center relative"
+            :class="unlockedIds.includes(a.id) ? TONE[a.tone] : 'bg-cream text-ink-soft'"
+          >
+            <component :is="ACH_ICONS[a.icon]" class="w-6 h-6" />
+            <span
+              v-if="!unlockedIds.includes(a.id)"
+              class="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-white shadow flex items-center justify-center"
+            >
+              <Lock class="w-3 h-3 text-ink-soft" />
+            </span>
+          </span>
+          <div class="font-black text-sm">{{ a.name }}</div>
+          <div class="text-[11px] font-bold text-ink-soft leading-snug">{{ a.desc }}</div>
+        </div>
+      </div>
+    </section>
   </div>
 </template>

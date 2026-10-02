@@ -20,6 +20,7 @@ import {
   Keyboard,
   GraduationCap,
   Sparkles,
+  CalendarCheck,
 } from 'lucide-vue-next';
 import { DIFFS } from '../core/sudoku';
 import { fmtTime } from '../core/format';
@@ -53,6 +54,8 @@ const TONE = {
   butter: 'bg-butter-soft text-butter-deep',
   azure: 'bg-azure-soft text-azure-deep',
   lilac: 'bg-lilac-soft text-lilac-deep',
+  blossom: 'bg-blossom-soft text-blossom-deep',
+  peach: 'bg-peach-soft text-peach-deep',
 };
 
 /** 开局：等 hydrate 完成后再取题（sig 重练要查错题本） */
@@ -68,15 +71,22 @@ async function init() {
     return;
   }
   const diff = DIFFS[q.diff] ? q.diff : 'easy4';
+  const daily = q.daily === '1';
   if (q.sig) {
     game.newGame({ diff, sig: String(q.sig) });
     return;
   }
-  // 从别处切回且同一难度还有进行中的对局 → 保留，不重开
-  if (game.active && !game.finished && !game.redoMode && game.diffKey === diff) {
+  // 从别处切回且同一难度还有进行中的普通对局 → 保留，不重开
+  if (
+    game.active &&
+    !game.finished &&
+    !game.redoMode &&
+    !game.dailyMode &&
+    game.diffKey === diff
+  ) {
     return;
   }
-  game.newGame({ diff });
+  game.newGame({ diff, daily });
   maybeShowGuide();
 }
 
@@ -136,6 +146,10 @@ function onKey(e) {
   } else if (k === 'Backspace' || k === 'Delete') {
     e.preventDefault();
     game.eraseCell();
+  } else if (k === 'n' || k === 'N') {
+    game.toggleNoteMode(); // 铅笔笔记开关
+  } else if (k === 'u' || k === 'U' || k === 'z' || k === 'Z') {
+    game.undo(); // 撤销
   } else if (k === 'h' || k === 'H') {
     onHint();
   } else if (k === 'c' || k === 'C') {
@@ -144,7 +158,7 @@ function onKey(e) {
 }
 
 watch(
-  () => [route.query.diff, route.query.sig],
+  () => [route.query.diff, route.query.sig, route.query.daily],
   () => {
     if (route.name === 'game') init();
   },
@@ -185,6 +199,11 @@ onBeforeUnmount(() => {
           {{ game.redoMode ? '错题重练 · ' : '' }}{{ diffMeta.label }}
         </span>
 
+        <span v-if="game.dailyMode" class="pill bg-peach-soft text-peach-deep">
+          <CalendarCheck class="w-3.5 h-3.5" />
+          每日挑战
+        </span>
+
         <span
           class="pill"
           :class="
@@ -221,6 +240,7 @@ onBeforeUnmount(() => {
             :puzzle="game.puzzle"
             :user="game.user"
             :errors="game.errors"
+            :notes="game.notes"
             :selected="game.selected"
             @select="onSelect"
           />
@@ -231,8 +251,12 @@ onBeforeUnmount(() => {
           />
           <GameToolbar
             :hints-left="game.hintsLeft"
+            :note-mode="game.noteMode"
+            :can-undo="game.canUndo"
             @hint="onHint"
+            @note="game.toggleNoteMode()"
             @erase="game.eraseCell()"
+            @undo="game.undo()"
             @reset="onReset"
             @check="game.runCheck()"
           />
@@ -349,6 +373,8 @@ onBeforeUnmount(() => {
       :mistakes="game.mistakes"
       :hints-used="game.hintsUsed"
       :redo="game.redoMode"
+      :daily="game.dailyMode"
+      :streak="records.streak"
       @again="playAgain"
       @home="router.push('/')"
     />
