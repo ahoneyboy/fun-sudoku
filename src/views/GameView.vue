@@ -78,12 +78,13 @@ async function init() {
     game.newGame({ diff, sig: String(q.sig) });
     return;
   }
-  // 从别处切回且同一难度还有进行中的普通对局 → 保留，不重开
+  // 仅"同难度的普通对局进行中"才保留现场；
+  // 显式带 daily=1 / sig 进入时一律开新局（用户意图优先）
   if (
+    !daily &&
     game.active &&
     !game.finished &&
     !game.redoMode &&
-    !game.dailyMode &&
     game.diffKey === diff
   ) {
     return;
@@ -192,13 +193,14 @@ onBeforeUnmount(() => {
 
       <!-- 分支必须是单根节点（Transition 约束）：包一层容器 -->
       <div v-else key="board" class="w-full">
-      <!-- 顶部信息条：返回 / 难度 / 失误 / 计时 -->
+      <!-- 顶部信息条：返回 / 难度 / 每日 / 失误 / 计时
+           移动端：胶囊不换行、放不下时整枚下沉到第二行（flex-wrap），图标隐藏省宽 -->
       <div
-        class="max-w-[560px] lg:max-w-none mx-auto card px-3 py-2.5 md:px-5 md:py-3 flex items-center gap-2 md:gap-3"
+        class="max-w-[560px] lg:max-w-none mx-auto card px-3 py-2.5 md:px-5 md:py-3 flex flex-wrap items-center gap-x-1.5 gap-y-1.5 md:gap-x-3 md:gap-y-0"
       >
         <button
           type="button"
-          class="md:hidden w-9 h-9 rounded-full bg-cream flex items-center justify-center cursor-pointer active:scale-95 transition-transform"
+          class="shrink-0 md:hidden w-9 h-9 rounded-full bg-cream flex items-center justify-center cursor-pointer active:scale-95 transition-transform"
           aria-label="返回首页"
           @click="router.push('/')"
         >
@@ -206,13 +208,14 @@ onBeforeUnmount(() => {
         </button>
 
         <span class="pill" :class="TONE[diffMeta.tone]">
-          <BarChart3 class="w-3.5 h-3.5" />
+          <BarChart3 class="hidden sm:block w-3.5 h-3.5" />
           {{ game.redoMode ? '错题重练 · ' : '' }}{{ diffMeta.label }}
         </span>
 
         <span v-if="game.dailyMode" class="pill bg-peach-soft text-peach-deep">
-          <CalendarCheck class="w-3.5 h-3.5" />
-          每日挑战
+          <CalendarCheck class="hidden sm:block w-3.5 h-3.5" />
+          <span class="sm:hidden">每日</span>
+          <span class="hidden sm:inline">每日挑战</span>
         </span>
 
         <span
@@ -221,18 +224,17 @@ onBeforeUnmount(() => {
             game.mistakes === 0 ? 'bg-mint-soft text-mint-deep' : 'bg-[#FFE4EA] text-[#E05C75]'
           "
         >
-          <Heart class="w-3.5 h-3.5" />
+          <Heart class="hidden sm:block w-3.5 h-3.5" />
           <!-- 失误数变化时数字抖动提醒（key 重挂载重放动画） -->
           <span :key="game.mistakes" class="inline-block" :class="game.mistakes > 0 ? 'animate-jitter' : ''">
-            {{ game.mistakes === 0 ? '零失误' : `${game.mistakes} 次小失误` }}
+            <span class="sm:hidden">{{ game.mistakes === 0 ? '零失误' : `小失误 ${game.mistakes}` }}</span>
+            <span class="hidden sm:inline">{{ game.mistakes === 0 ? '零失误' : `${game.mistakes} 次小失误` }}</span>
           </span>
         </span>
 
-        <span class="flex-1" />
-
         <button
           type="button"
-          class="pill bg-cream text-ink cursor-pointer active:scale-95 transition-transform"
+          class="pill shrink-0 ml-auto bg-cream text-ink cursor-pointer active:scale-95 transition-transform"
           :aria-label="game.showTime ? '隐藏计时' : '显示计时'"
           @click="game.toggleTimeVisible()"
         >

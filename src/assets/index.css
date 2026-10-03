@@ -49,9 +49,9 @@
   .card {
     @apply bg-white rounded-3xl shadow-[0_6px_20px_rgba(91,74,84,0.08)];
   }
-  /* 小徽章 */
+  /* 小徽章：禁止文字换行（窄屏下胶囊被压缩会竖排断字），移动端收紧内边距 */
   .pill {
-    @apply inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-bold;
+    @apply inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold whitespace-nowrap sm:px-3;
   }
 }
 

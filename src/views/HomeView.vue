@@ -109,31 +109,37 @@ function startGame(key) {
       </div>
     </section>
 
-    <!-- 每日挑战：按星期轮换难度，同一天全网同题，连胜激励 -->
+    <!-- 每日挑战：按星期轮换难度，同一天全网同题，连胜激励
+         移动端：文案块 + 通栏按钮上下堆叠；sm 起恢复左文右按钮 -->
     <section
-      class="stagger-item card overflow-hidden bg-peach-soft border border-[#F5D9BC] p-5 md:p-6 flex items-center gap-4"
+      class="stagger-item card overflow-hidden bg-peach-soft border border-[#F5D9BC] p-5 md:p-6 sm:flex sm:items-center sm:gap-4"
       :style="{ '--i': 1 }"
     >
-      <span
-        class="w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-white/80 text-peach-deep flex items-center justify-center shrink-0 animate-pulse-soft"
-      >
-        <CalendarCheck class="w-7 h-7 md:w-8 md:h-8" />
-      </span>
-      <div class="flex-1 min-w-0">
-        <div class="font-black text-base md:text-lg">
-          每日挑战
-          <span class="pill bg-white/70 text-peach-deep ml-1">{{ todayLabel }}</span>
+      <div class="flex items-center gap-3 sm:flex-1 sm:min-w-0">
+        <span
+          class="w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-white/80 text-peach-deep flex items-center justify-center shrink-0 animate-pulse-soft"
+        >
+          <CalendarCheck class="w-7 h-7 md:w-8 md:h-8" />
+        </span>
+        <div class="flex-1 min-w-0">
+          <div class="font-black text-base md:text-lg flex items-center flex-wrap gap-x-2 gap-y-1">
+            每日挑战
+            <span class="pill bg-white/70 text-peach-deep">{{ todayLabel }}</span>
+            <span
+              v-if="records.streak > 0"
+              class="pill bg-peach-deep text-white"
+            >
+              连胜 {{ records.streak }} 天
+            </span>
+          </div>
+          <p class="text-xs md:text-sm font-bold text-ink-soft mt-1.5 leading-relaxed">
+            今天的题目：{{ dailyMeta.label }} · {{ dailyMeta.holes }} 个空格
+          </p>
         </div>
-        <p class="text-xs md:text-sm font-bold text-ink-soft mt-1">
-          今天的题目：{{ dailyMeta.label }}（{{ dailyMeta.desc }}）
-          <template v-if="records.streak > 0">
-            · 已连胜 <span class="text-peach-deep">{{ records.streak }}</span> 天
-          </template>
-        </p>
       </div>
       <button
         type="button"
-        class="btn-candy shrink-0 px-4 md:px-6 py-2.5 md:py-3 text-sm md:text-base"
+        class="btn-candy mt-3.5 w-full sm:mt-0 sm:w-auto shrink-0 justify-center px-4 md:px-6 py-2.5 md:py-3 text-sm md:text-base"
         :class="records.todayDailyDone ? 'bg-white/80 text-peach-deep' : 'bg-peach-deep text-white'"
         @click="goDaily"
       >
