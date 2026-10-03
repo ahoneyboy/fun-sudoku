@@ -58,7 +58,13 @@ onBeforeUnmount(() => {
     <AppSidebar />
     <div class="flex-1 min-w-0 flex flex-col">
       <main class="flex-1">
-        <router-view />
+        <!-- 页面转场：淡入 + 上移 + 微缩放，out-in 避免双页同帧；
+             显式 duration 确保在 transitionend 不可靠的环境也能确定性收尾 -->
+        <router-view v-slot="{ Component }">
+          <Transition name="page" mode="out-in" :duration="{ enter: 250, leave: 180 }">
+            <component :is="Component" />
+          </Transition>
+        </router-view>
       </main>
     </div>
     <BottomTabBar />

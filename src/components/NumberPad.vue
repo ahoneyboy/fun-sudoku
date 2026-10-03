@@ -2,6 +2,11 @@
 /**
  * 数字键盘：显示每个数字剩余可填数量；
  * 剩余为 0 的数字置灰禁填（防止无效重复）。
+ *
+ * 【动效】
+ * - 点按：active 缩到 0.92，松开以 --ease-bounce 回弹（自带 1.05 过冲观感，200ms）；
+ * - "剩 N"：数值变化时旧值绕 X 轴翻出、新值翻入（Vue Transition out-in，约 250ms）；
+ * - 用完置灰：scale 0.9 + 轻微下沉 150ms；恢复可用时以弹性缓动弹回。
  */
 import { computed } from 'vue';
 
@@ -30,7 +35,7 @@ const colsClass = computed(() => {
         v-for="v in digits"
         :key="v"
         type="button"
-        class="flex flex-col items-center justify-center rounded-2xl bg-white py-2 sm:py-2.5 shadow-candy-sm transition-all duration-150 active:translate-y-0.5 active:scale-95 disabled:opacity-40 disabled:pointer-events-none cursor-pointer select-none"
+        class="flex flex-col items-center justify-center rounded-2xl bg-white py-2 sm:py-2.5 shadow-candy-sm transition-transform duration-200 [transition-timing-function:var(--ease-bounce)] active:scale-90 disabled:pointer-events-none disabled:opacity-40 disabled:scale-90 disabled:translate-y-0.5 cursor-pointer select-none"
         :aria-label="`填入 ${v}`"
         :disabled="remaining[v - 1] <= 0"
         @click="emit('input', v)"
@@ -40,7 +45,14 @@ const colsClass = computed(() => {
           >{{ v }}</span
         >
         <span class="mt-0.5 text-[10px] md:text-xs font-bold text-ink-soft">
-          剩 {{ remaining[v - 1] }}
+          <!-- 剩 N：绕 X 轴翻转换值 -->
+          <span class="inline-block" style="perspective: 160px">
+            <Transition name="flip" mode="out-in" :duration="{ enter: 150, leave: 100 }">
+              <span :key="remaining[v - 1]" class="inline-block">
+                剩 {{ remaining[v - 1] }}
+              </span>
+            </Transition>
+          </span>
         </span>
       </button>
     </div>

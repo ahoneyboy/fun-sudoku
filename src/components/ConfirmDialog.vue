@@ -17,7 +17,7 @@ const emit = defineEmits(['confirm']);
 
 <template>
   <Teleport to="body">
-    <Transition name="modal">
+    <Transition name="modal" :duration="200">
       <div
         v-if="open"
         class="fixed inset-0 z-50 bg-black/30 flex items-center justify-center p-6"

@@ -46,6 +46,8 @@ const ui = useUiStore();
 
 const resetOpen = ref(false);
 const guideOpen = ref(false);
+// 提示星火：命中的格子下标（700ms 后清除，让 600ms 星火动画播完）
+const sparkIndex = ref(-1);
 
 const diffMeta = computed(() => DIFFS[game.diffKey] || DIFFS.easy4);
 // Tailwind JIT 需要字面量类名
@@ -104,7 +106,14 @@ function closeGuide(goLearn) {
 
 async function onHint() {
   const r = game.useHint();
-  if (r) ui.toast(r.text, 'info', 4200);
+  if (r) {
+    ui.toast(r.text, 'info', 4200);
+    // 星火只做视觉反馈：命中格喷发 600ms 后清理
+    sparkIndex.value = r.idx;
+    setTimeout(() => {
+      sparkIndex.value = -1;
+    }, 700);
+  }
 }
 function onReset() {
   resetOpen.value = true;
@@ -175,12 +184,14 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="w-full max-w-6xl mx-auto px-4 pt-4 pb-28 md:px-8 md:pt-6 md:pb-10">
-    <!-- 骨架：newGame 是异步的（读缓存池），未就绪前不闪空盘 -->
-    <div v-if="!game.active" class="max-w-[440px] mx-auto mt-10">
-      <div class="card aspect-square animate-pulse bg-[#F7F2FB]" />
-    </div>
+    <!-- 骨架 ↔ 内容 平滑切换：异步 init 期间不闪跳 -->
+    <Transition name="fade-swap" mode="out-in" :duration="{ enter: 200, leave: 150 }">
+      <div v-if="!game.active" key="skeleton" class="max-w-[440px] mx-auto mt-10">
+        <div class="card aspect-square animate-pulse bg-[#F7F2FB]" />
+      </div>
 
-    <template v-else>
+      <!-- 分支必须是单根节点（Transition 约束）：包一层容器 -->
+      <div v-else key="board" class="w-full">
       <!-- 顶部信息条：返回 / 难度 / 失误 / 计时 -->
       <div
         class="max-w-[560px] lg:max-w-none mx-auto card px-3 py-2.5 md:px-5 md:py-3 flex items-center gap-2 md:gap-3"
@@ -211,7 +222,10 @@ onBeforeUnmount(() => {
           "
         >
           <Heart class="w-3.5 h-3.5" />
-          {{ game.mistakes === 0 ? '零失误' : `${game.mistakes} 次小失误` }}
+          <!-- 失误数变化时数字抖动提醒（key 重挂载重放动画） -->
+          <span :key="game.mistakes" class="inline-block" :class="game.mistakes > 0 ? 'animate-jitter' : ''">
+            {{ game.mistakes === 0 ? '零失误' : `${game.mistakes} 次小失误` }}
+          </span>
         </span>
 
         <span class="flex-1" />
@@ -242,6 +256,8 @@ onBeforeUnmount(() => {
             :errors="game.errors"
             :notes="game.notes"
             :selected="game.selected"
+            :spark-index="sparkIndex"
+            :celebrate="game.finished"
             @select="onSelect"
           />
           <NumberPad
@@ -317,7 +333,8 @@ onBeforeUnmount(() => {
           </div>
         </aside>
       </div>
-    </template>
+      </div>
+    </Transition>
 
     <!-- 重置二次确认 -->
     <ConfirmDialog
@@ -330,7 +347,7 @@ onBeforeUnmount(() => {
 
     <!-- 首次游玩引导 -->
     <Teleport to="body">
-      <Transition name="modal">
+      <Transition name="modal" :duration="200">
         <div
           v-if="guideOpen"
           class="fixed inset-0 z-50 bg-black/30 flex items-center justify-center p-6"

@@ -76,11 +76,11 @@ function startGame(key) {
 
 <template>
   <div class="w-full max-w-5xl mx-auto px-4 pt-5 pb-28 md:px-8 md:pt-8 md:pb-10 space-y-6">
-    <!-- Hero：欢迎卡片 -->
+    <!-- Hero：欢迎卡片（标题整块上推入场，装饰四宫格慢悬浮摇摆） -->
     <section
       class="card overflow-hidden bg-lilac-soft border border-[#E4D5FA] p-6 md:p-10 flex items-center gap-6"
     >
-      <div class="flex-1 min-w-0">
+      <div class="hero-push flex-1 min-w-0">
         <div class="pill bg-white/70 text-lilac-deep mb-3">
           <Sparkles class="w-3.5 h-3.5" />
           6-12 岁专属卡通数独
@@ -100,8 +100,8 @@ function startGame(key) {
           四宫先来一局
         </button>
       </div>
-      <!-- 装饰：马卡龙四宫格（CSS 形状，无 emoji） -->
-      <div class="hidden sm:grid grid-cols-2 gap-2 rotate-6 animate-floaty shrink-0">
+      <!-- 装饰：马卡龙四宫格（CSS 形状，无 emoji），慢悬浮 + 轻微摇摆 -->
+      <div class="hidden sm:grid grid-cols-2 gap-2 animate-floaty-tilt shrink-0">
         <div class="w-12 h-12 md:w-16 md:h-16 rounded-2xl bg-white/85 flex items-center justify-center font-black text-xl md:text-2xl text-mint-deep">1</div>
         <div class="w-12 h-12 md:w-16 md:h-16 rounded-2xl bg-white/85 flex items-center justify-center font-black text-xl md:text-2xl text-butter-deep">2</div>
         <div class="w-12 h-12 md:w-16 md:h-16 rounded-2xl bg-white/85 flex items-center justify-center font-black text-xl md:text-2xl text-azure-deep">3</div>
@@ -111,10 +111,11 @@ function startGame(key) {
 
     <!-- 每日挑战：按星期轮换难度，同一天全网同题，连胜激励 -->
     <section
-      class="card overflow-hidden bg-peach-soft border border-[#F5D9BC] p-5 md:p-6 flex items-center gap-4"
+      class="stagger-item card overflow-hidden bg-peach-soft border border-[#F5D9BC] p-5 md:p-6 flex items-center gap-4"
+      :style="{ '--i': 1 }"
     >
       <span
-        class="w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-white/80 text-peach-deep flex items-center justify-center shrink-0 animate-floaty"
+        class="w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-white/80 text-peach-deep flex items-center justify-center shrink-0 animate-pulse-soft"
       >
         <CalendarCheck class="w-7 h-7 md:w-8 md:h-8" />
       </span>
@@ -142,14 +143,15 @@ function startGame(key) {
     </section>
 
     <!-- 难度入口 -->
-    <section>
+    <section class="stagger-item" :style="{ '--i': 2 }">
       <h2 class="text-lg md:text-xl font-black mb-3 px-1">选个难度，出发！</h2>
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
         <button
           v-for="(d, key) in DIFFS"
           :key="key"
           type="button"
-          class="card p-5 text-left transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] cursor-pointer"
+          class="stagger-item card p-5 text-left transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] cursor-pointer"
+          :style="{ '--i': 3 + DIFF_KEYS.indexOf(key) }"
           @click="startGame(key)"
         >
           <div class="flex items-center justify-between mb-3">
@@ -169,7 +171,7 @@ function startGame(key) {
     </section>
 
     <!-- 统计概览 -->
-    <section>
+    <section class="stagger-item" :style="{ '--i': 4 }">
       <div class="flex items-center justify-between mb-3 px-1">
         <h2 class="text-lg md:text-xl font-black">我的战绩</h2>
         <router-link
@@ -188,7 +190,7 @@ function startGame(key) {
     </section>
 
     <!-- 功能入口 -->
-    <section>
+    <section class="stagger-item" :style="{ '--i': 5 }">
       <h2 class="text-lg md:text-xl font-black mb-3 px-1">更多好玩</h2>
       <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
         <router-link

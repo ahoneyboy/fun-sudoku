@@ -2,8 +2,21 @@
 @tailwind components;
 @tailwind utilities;
 
-/* 为什么不用手写 @media：响应式全部通过 Tailwind 断点前缀完成，
-   这里只放与断点无关的全局基线、组件类和关键帧动画 */
+/* ============================================================
+   趣味数独 · 动效体系
+   原则：动效只用 transform + opacity；关键帧集中在本文件；
+   类名字面量（.animate-xxx），供 Tailwind JIT 稳定收集。
+   ============================================================ */
+
+/* ---------- 动效令牌 ---------- */
+:root {
+  /* 弹性回弹：落格、弹窗、按钮回弹 */
+  --ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+  /* 柔和减速：入场、stagger、光晕 */
+  --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* 响应式断点全部走 Tailwind 前缀，这里只放与断点无关的样式 */
 
 @layer base {
   html {
@@ -22,11 +35,15 @@
 }
 
 @layer components {
-  /* 糖果按钮基类：大圆角 + 底部厚阴影 + 按压下沉 */
+  /* 糖果按钮基类：大圆角 + 底部厚阴影 + 弹性按压手感
+     （按压 0.97 下沉，松开以 bounce 缓动回弹，天然带 1.05 过冲观感） */
   .btn-candy {
     @apply inline-flex items-center justify-center gap-2 rounded-full font-bold cursor-pointer select-none
-      transition-all duration-150 active:translate-y-0.5 active:scale-[0.97]
+      active:translate-y-0.5 active:scale-[0.97]
       disabled:opacity-50 disabled:pointer-events-none shadow-candy;
+    transition:
+      transform 180ms var(--ease-bounce),
+      opacity 150ms ease;
   }
   /* 通用白卡片：大圆角 + 极浅投影 */
   .card {
@@ -38,9 +55,374 @@
   }
 }
 
-/* ---------- 关键帧动画（与断点无关） ---------- */
+/* ============================================================
+   关键帧 · 填数与格子反馈
+   ============================================================ */
 
-/* 填错/答错的轻微摇头 */
+/* 题目给定数字：首次渲染 300ms 淡入（不弹跳） */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+.animate-fade-in {
+  animation: fade-in 300ms var(--ease-out-soft) both;
+}
+
+/* 用户填数：弹性回弹落格（配合 Vue Transition name="num"） */
+@keyframes num-drop {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.4);
+  }
+  60% {
+    opacity: 1;
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+.num-enter-active {
+  animation: num-drop 220ms var(--ease-bounce);
+  will-change: transform, opacity;
+}
+/* 擦除/覆盖旧值：缩小上浮淡出（180ms） */
+@keyframes num-out {
+  to {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.7);
+  }
+}
+.num-leave-active {
+  animation: num-out 180ms ease-in;
+  will-change: transform, opacity;
+}
+
+/* 用户填数落格：格子外圈淡蓝涟漪光晕（azure soft #E0EEFF） */
+.cell-fill-pop::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  border: 2px solid #e0eeff;
+  pointer-events: none;
+  animation: cell-ripple 300ms var(--ease-out-soft) both;
+}
+@keyframes cell-ripple {
+  from {
+    opacity: 0.6;
+    transform: scale(0.6);
+  }
+  to {
+    opacity: 0;
+    transform: scale(1.15);
+  }
+}
+
+/* 选中格：2s 呼吸光晕（blossom #E05C75 光环，opacity 脉动） */
+.animate-breath-glow::before {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: inherit;
+  pointer-events: none;
+  box-shadow:
+    0 0 0 2px rgba(224, 92, 117, 0.5),
+    0 0 16px 2px rgba(224, 92, 117, 0.32);
+  animation: breath 2s ease-in-out infinite;
+  will-change: opacity;
+}
+@keyframes breath {
+  0%,
+  100% {
+    opacity: 0.3;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* 铅笔笔记：逐个 stagger 淡入（--i 为序号） */
+@keyframes note-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px) scale(0.6);
+  }
+}
+.animate-note-in {
+  animation: note-in 240ms var(--ease-out-soft) both;
+  animation-delay: calc(var(--i, 0) * 50ms);
+}
+
+/* 填错：摇摆 + 轻微下沉（红晕脉冲见 .cell-error-flash） */
+@keyframes error-wobble {
+  0%,
+  100% {
+    transform: translateX(0) translateY(0);
+  }
+  15% {
+    transform: translateX(-5px) translateY(1.5px);
+  }
+  30% {
+    transform: translateX(5px) translateY(1.5px);
+  }
+  45% {
+    transform: translateX(-4px) translateY(1px);
+  }
+  60% {
+    transform: translateX(4px) translateY(1px);
+  }
+  75% {
+    transform: translateX(-2px);
+  }
+}
+.animate-error-in {
+  animation: error-wobble 450ms var(--ease-out-soft);
+  will-change: transform;
+}
+/* 红晕脉冲：blossom 薄纱在格内闪两次（opacity 动画） */
+.cell-error-flash::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: rgba(224, 92, 117, 0.28);
+  animation: error-flash 460ms ease-out;
+}
+@keyframes error-flash {
+  0%,
+  40%,
+  85%,
+  100% {
+    opacity: 0;
+  }
+  20%,
+  62% {
+    opacity: 1;
+  }
+}
+
+/* 顶部失误数：数字抖动提醒 */
+@keyframes jitter {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-2.5px);
+  }
+  50% {
+    transform: translateX(2.5px);
+  }
+  75% {
+    transform: translateX(-1px);
+  }
+}
+.animate-jitter {
+  animation: jitter 400ms ease-in-out;
+}
+
+/* 提示星火：被提示格喷出的小圆点（--sx/--sy 为放射位移） */
+.spark-dot {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 6px;
+  height: 6px;
+  margin: -3px 0 0 -3px;
+  border-radius: 9999px;
+  pointer-events: none;
+  animation: spark-fly 600ms var(--ease-out-soft) both;
+}
+@keyframes spark-fly {
+  0% {
+    opacity: 1;
+    transform: translate(0, 0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--sx, 20px), var(--sy, -20px)) scale(0.2);
+  }
+}
+
+/* ============================================================
+   关键帧 · 通关庆典
+   ============================================================ */
+
+/* 扫描波：通关时每格按（行+列）对角线次序依次弹跳，--wd 为延迟 */
+@keyframes wave-jump {
+  0% {
+    transform: translateY(0) scale(1);
+  }
+  40% {
+    transform: translateY(-9px) scale(1.07);
+  }
+  100% {
+    transform: translateY(0) scale(1);
+  }
+}
+.animate-wave {
+  animation: wave-jump 480ms var(--ease-bounce) both;
+  animation-delay: var(--wd, 0ms);
+}
+
+/* 通关星星：pop + 旋转入场（金色光晕见 .star-halo） */
+@keyframes star-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0) rotate(-120deg);
+  }
+  70% {
+    opacity: 1;
+    transform: scale(1.18) rotate(8deg);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+}
+.animate-star-pop {
+  animation: star-pop 500ms var(--ease-bounce) both;
+  will-change: transform;
+}
+/* 星星金色光晕：径向渐变圆片，绽放后消散 */
+.star-halo {
+  position: absolute;
+  inset: -8px;
+  border-radius: 9999px;
+  pointer-events: none;
+  background: radial-gradient(circle, rgba(255, 197, 61, 0.55), rgba(255, 197, 61, 0) 72%);
+  animation: halo-bloom 700ms var(--ease-out-soft) both;
+}
+@keyframes halo-bloom {
+  0% {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+  55% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.3);
+  }
+}
+
+/* 彩带：马卡龙色小纸片，重力下落（--cx 横漂 / --cr 旋转 / --cd 时长 / --cdel 延迟） */
+.confetti-piece {
+  position: absolute;
+  top: -14px;
+  width: var(--cw, 8px);
+  height: var(--ch, 12px);
+  border-radius: 2px;
+  pointer-events: none;
+  will-change: transform, opacity;
+  animation: confetti-fall var(--cd, 1.4s) cubic-bezier(0.42, 0, 1, 1) var(--cdel, 0s) both;
+}
+@keyframes confetti-fall {
+  0% {
+    opacity: 1;
+    transform: translate3d(0, -2vh, 0) rotate(0deg);
+  }
+  85% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(var(--cx, 0px), 76vh, 0) rotate(var(--cr, 540deg));
+  }
+}
+
+/* 通关弹窗卡片：缩放入场（略微延后，让扫描波先亮相） */
+@keyframes modal-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+.animate-modal-pop {
+  animation: modal-pop 300ms var(--ease-bounce) 140ms both;
+}
+
+/* ============================================================
+   关键帧 · 页面与列表入场
+   ============================================================ */
+
+/* 通用淡入上移（弹窗遮罩内卡片、说明卡等） */
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-fade-up {
+  animation: fade-up 0.28s ease-out both;
+}
+
+/* 首页 section 逐个入场（--i 为序号，60ms 步进） */
+@keyframes fade-up-soft {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+}
+.stagger-item {
+  animation: fade-up-soft 550ms var(--ease-out-soft) both;
+  animation-delay: calc(var(--i, 0) * 60ms);
+}
+
+/* Hero 标题整块上推入场 */
+@keyframes hero-push {
+  from {
+    opacity: 0;
+    transform: translateY(26px);
+  }
+}
+.hero-push {
+  animation: hero-push 600ms var(--ease-out-soft) both;
+}
+
+/* 首页装饰四宫格：慢悬浮 + 轻微摇摆 */
+@keyframes floaty-tilt {
+  0%,
+  100% {
+    transform: translateY(0) rotate(4deg);
+  }
+  50% {
+    transform: translateY(-8px) rotate(9deg);
+  }
+}
+.animate-floaty-tilt {
+  animation: floaty-tilt 5s ease-in-out infinite;
+  will-change: transform;
+}
+
+/* 每日挑战图标轻微脉冲 */
+@keyframes pulse-soft {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.07);
+  }
+}
+.animate-pulse-soft {
+  animation: pulse-soft 2.2s ease-in-out infinite;
+  will-change: transform;
+}
+
+/* ---------- 兼容保留：学堂页答错摇头 / 毕业图标弹出 / 装饰浮动 ---------- */
 @keyframes shake {
   0%,
   100% {
@@ -59,8 +441,9 @@
     transform: translateX(3px);
   }
 }
-
-/* 通关星星逐个弹出 */
+.animate-shake {
+  animation: shake 0.4s ease-in-out;
+}
 @keyframes pop {
   0% {
     transform: scale(0);
@@ -72,8 +455,9 @@
     transform: scale(1);
   }
 }
-
-/* 首页装饰的轻浮动 */
+.animate-pop {
+  animation: pop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
 @keyframes floaty {
   0%,
   100% {
@@ -83,46 +467,96 @@
     transform: translateY(-6px);
   }
 }
-
-/* 通用淡入上移（弹窗卡片、Toast） */
-@keyframes fade-up {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.animate-shake {
-  animation: shake 0.4s ease-in-out;
-}
-.animate-pop {
-  animation: pop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both;
-}
 .animate-floaty {
   animation: floaty 3s ease-in-out infinite;
 }
-.animate-fade-up {
-  animation: fade-up 0.28s ease-out both;
+
+/* ============================================================
+   Vue Transition：路由 / Toast / 数字翻转 / 骨架切换
+   ============================================================ */
+
+/* 页面转场：淡入 + 上移 + 微缩放（enter/leave 均定义） */
+.page-enter-active {
+  transition:
+    opacity 250ms var(--ease-out-soft),
+    transform 250ms var(--ease-out-soft);
+  will-change: transform, opacity;
+}
+.page-leave-active {
+  transition:
+    opacity 180ms ease,
+    transform 180ms ease;
+  will-change: transform, opacity;
+}
+.page-enter-from {
+  opacity: 0;
+  transform: translateY(8px) scale(0.99);
+}
+.page-leave-to {
+  opacity: 0;
+  transform: translateY(-4px) scale(0.995);
 }
 
-/* Toast 列表过渡（TransitionGroup） */
-.toast-enter-active,
+/* 骨架 ↔ 内容 平滑切换（游戏页异步 init） */
+.fade-swap-enter-active {
+  transition:
+    opacity 200ms var(--ease-out-soft),
+    transform 200ms var(--ease-out-soft);
+}
+.fade-swap-leave-active {
+  transition:
+    opacity 150ms ease,
+    transform 150ms ease;
+}
+.fade-swap-enter-from {
+  opacity: 0;
+  transform: translateY(6px);
+}
+.fade-swap-leave-to {
+  opacity: 0;
+}
+
+/* Toast：从底部弹入（移动端习惯），leave 轻微下沉淡出 */
+.toast-enter-active {
+  transition:
+    opacity 300ms var(--ease-bounce),
+    transform 300ms var(--ease-bounce);
+}
 .toast-leave-active {
   transition:
-    opacity 0.25s ease,
-    transform 0.25s ease;
+    opacity 200ms ease,
+    transform 200ms ease;
 }
-.toast-enter-from,
+.toast-enter-from {
+  opacity: 0;
+  transform: translateY(16px) scale(0.92);
+}
 .toast-leave-to {
   opacity: 0;
-  transform: translateY(-8px) scale(0.95);
+  transform: translateY(8px) scale(0.95);
 }
 
-/* 弹窗遮罩过渡 */
+/* 数字键盘"剩 N"：绕 X 轴翻转（父级需 perspective） */
+.flip-enter-active {
+  animation: flip-in 150ms var(--ease-out-soft);
+}
+.flip-leave-active {
+  animation: flip-out 100ms ease-in;
+}
+@keyframes flip-in {
+  from {
+    opacity: 0;
+    transform: rotateX(90deg);
+  }
+}
+@keyframes flip-out {
+  to {
+    opacity: 0;
+    transform: rotateX(-90deg);
+  }
+}
+
+/* 弹窗遮罩过渡（卡片自身的入场由 .animate-modal-pop 承担） */
 .modal-enter-active,
 .modal-leave-active {
   transition: opacity 0.2s ease;
@@ -130,4 +564,60 @@
 .modal-enter-from,
 .modal-leave-to {
   opacity: 0;
+}
+
+/* ============================================================
+   无障碍：偏好减弱动效
+   关闭纯装饰与高频动效，保留淡入淡出与颜色线索
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+  /* 纯装饰/高频：整体隐藏 */
+  .animate-floaty,
+  .animate-floaty-tilt,
+  .animate-pulse-soft,
+  .animate-breath-glow::before,
+  .confetti-piece,
+  .spark-dot {
+    display: none !important;
+  }
+  /* 强反馈：改为普通淡入（不再摇摆/闪红） */
+  .animate-error-in,
+  .animate-shake,
+  .animate-jitter {
+    animation: fade-in 200ms ease both !important;
+  }
+  .cell-error-flash::before {
+    animation: none !important;
+    opacity: 0 !important;
+  }
+  /* 一次性入场：压短时长但保留淡入淡出结果 */
+  .stagger-item,
+  .hero-push,
+  .animate-fade-up,
+  .animate-modal-pop,
+  .animate-star-pop,
+  .animate-wave,
+  .animate-note-in,
+  .animate-fade-in {
+    animation-duration: 120ms !important;
+    animation-delay: 0ms !important;
+  }
+  .star-halo {
+    animation: none !important;
+    opacity: 0 !important;
+  }
+  /* 过渡类压短，颜色线索保留 */
+  .page-enter-active,
+  .page-leave-active,
+  .fade-swap-enter-active,
+  .fade-swap-leave-active,
+  .toast-enter-active,
+  .toast-leave-active,
+  .num-enter-active,
+  .num-leave-active,
+  .flip-enter-active,
+  .flip-leave-active {
+    transition-duration: 80ms !important;
+    animation-duration: 80ms !important;
+  }
 }

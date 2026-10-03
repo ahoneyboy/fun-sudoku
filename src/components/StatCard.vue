@@ -1,13 +1,19 @@
 <script setup>
 /**
- * 数字统计卡：图标圆片 + 大数字 + 标签（首页概览 / 统计页顶部共用）
+ * 数字统计卡：图标圆片 + 大数字（count-up 滚动）+ 标签
+ * （首页概览 / 统计页顶部共用）
  */
-defineProps({
+import CountNumber from './CountNumber.vue';
+
+const props = defineProps({
   label: { type: String, required: true },
   value: { type: [Number, String], required: true },
   icon: { type: [Object, Function], required: true },
-  tone: { type: String, default: 'mint' }, // mint/butter/azure/lilac/blossom
+  tone: { type: String, default: 'mint' }, // mint/butter/azure/lilac/blossom/peach
 });
+
+// 数值型才做 count-up 滚动，文本直接展示
+const isNumeric = typeof props.value === 'number' && Number.isFinite(props.value);
 
 // Tailwind JIT 需要字面量类名，tone → class 用静态映射
 const TONE = {
@@ -16,6 +22,7 @@ const TONE = {
   azure: 'bg-azure-soft text-azure-deep',
   lilac: 'bg-lilac-soft text-lilac-deep',
   blossom: 'bg-blossom-soft text-blossom-deep',
+  peach: 'bg-peach-soft text-peach-deep',
 };
 </script>
 
@@ -28,7 +35,10 @@ const TONE = {
       <component :is="icon" class="w-6 h-6" />
     </div>
     <div class="min-w-0">
-      <div class="text-2xl md:text-3xl font-black leading-tight">{{ value }}</div>
+      <div class="text-2xl md:text-3xl font-black leading-tight">
+        <CountNumber v-if="isNumeric" :value="value" />
+        <template v-else>{{ value }}</template>
+      </div>
       <div class="text-xs md:text-sm font-bold text-ink-soft truncate">
         {{ label }}
       </div>

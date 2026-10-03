@@ -21,11 +21,12 @@ function colorFor(type) {
 </script>
 
 <template>
+  <!-- 移动端贴底部（TabBar 上方）弹入，md 及以上回到顶部 -->
   <div
-    class="fixed top-4 inset-x-0 z-[70] flex flex-col items-center gap-2 px-4 pointer-events-none"
+    class="fixed inset-x-0 bottom-24 md:bottom-auto md:top-4 z-[70] flex flex-col items-center gap-2 px-4 pointer-events-none"
     aria-live="polite"
   >
-    <TransitionGroup name="toast">
+    <TransitionGroup name="toast" :duration="300">
       <div
         v-for="t in ui.toasts"
         :key="t.id"
