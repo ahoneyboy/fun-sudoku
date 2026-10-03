@@ -107,8 +107,27 @@ tests/sudoku.test.js           # 引擎自测（vitest）
       全站无 emoji 图标，图标均为 lucide SVG
 - [x] `npm run build` 产物纯静态、hash 路由刷新不 404，已部署 GitHub Pages 并线上验证
 
+## 动效体系
+
+全部动效只用 transform + opacity，关键帧集中在 `src/assets/index.css`（缓动 token
+`--ease-bounce` / `--ease-out-soft`），并对 `prefers-reduced-motion` 做了降级
+（隐藏纯装饰动画、保留淡入淡出与颜色线索，count-up 直接显示终值）。
+
+| 场景 | 动效 |
+| --- | --- |
+| 填数 | 数字弹性落格（220ms bounce）+ 覆盖重填旧出新进 + 外圈淡蓝涟漪 300ms；给定数字仅 300ms 淡入 |
+| 选中 | 高亮 200ms 过渡；选中格 2s 呼吸光晕（blossom 光环 opacity 脉动） |
+| 擦除/撤销/提示 | 擦除缩小上浮淡出 180ms；笔记逐个 stagger 淡入；撤销反向回放；提示格喷 5 颗星火 600ms |
+| 错误 | 摇摆下沉 + 红晕脉冲两连闪 + 顶部失误数抖动（不做负面表现） |
+| 通关 | 棋盘对角线扫描波（45ms/格）、24 条马卡龙彩带重力下落、星星旋转入场 + 金色光晕、弹窗缩放入场、成绩 count-up（rAF，800ms） |
+| 键盘 | 点按弹跳回弹、剩 N 绕 X 轴翻转换值、用完置灰下沉 |
+| 页面 | 路由 out-in 转场（淡入+上移+微缩放）、游戏页骨架平滑切换、首页 stagger/Hero 上推/装饰慢摇摆 |
+| 微交互 | Toast 底部弹入（移动端习惯）、btn-candy 弹性按压手感 |
+
 ## 说明
 
 - 工程在规格要求的 stores 之外补充了 `stores/db.js`（localforage 统一封装与内存降级）与
   `stores/ui.js`（全局 Toast 队列），组件依旧不直接操作 localforage。
 - ECharts 仅在统计页路由懒加载（StatsView chunk 独立），首屏体积不受影响。
+- 所有 Vue Transition 均显式声明 `:duration`，过渡结束不依赖 transitionend 事件，
+  在后台标签页等事件不可靠的环境下也能确定性收尾。
