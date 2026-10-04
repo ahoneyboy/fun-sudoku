@@ -33,7 +33,7 @@ function isActive(to) {
   <!-- 外层：只负责定位，不拦截手势 -->
   <div class="fixed inset-x-0 bottom-0 z-40 md:hidden pointer-events-none">
     <nav
-      class="pointer-events-auto rounded-t-[26px] bg-white/90 backdrop-blur-md border-t border-x border-white/70 shadow-[0_-8px_30px_rgba(91,74,84,0.18)]"
+      class="pointer-events-auto bg-white/90 backdrop-blur-md border-t border-[#F0E4D2]"
       aria-label="底部导航"
     >
       <div class="grid grid-cols-5 px-1.5">
