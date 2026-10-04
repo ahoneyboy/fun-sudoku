@@ -184,7 +184,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="w-full max-w-6xl mx-auto px-4 pt-4 pb-28 md:px-8 md:pt-6 md:pb-10">
+  <div class="w-full max-w-6xl mx-auto px-4 pt-3 pb-28 md:px-8 md:pt-6 md:pb-10">
     <!-- 骨架 ↔ 内容 平滑切换：异步 init 期间不闪跳 -->
     <Transition name="fade-swap" mode="out-in" :duration="{ enter: 200, leave: 150 }">
       <div v-if="!game.active" key="skeleton" class="max-w-[440px] mx-auto mt-10">
@@ -196,7 +196,7 @@ onBeforeUnmount(() => {
       <!-- 顶部信息条：返回 / 难度 / 每日 / 失误 / 计时
            移动端：胶囊不换行、放不下时整枚下沉到第二行（flex-wrap），图标隐藏省宽 -->
       <div
-        class="max-w-[560px] lg:max-w-none mx-auto card px-3 py-2.5 md:px-5 md:py-3 flex flex-wrap items-center gap-x-1.5 gap-y-1.5 md:gap-x-3 md:gap-y-0"
+        class="max-w-[560px] lg:max-w-none mx-auto card px-3 py-2 md:px-5 md:py-3 flex flex-wrap items-center gap-x-1.5 gap-y-1.5 md:gap-x-3 md:gap-y-0"
       >
         <button
           type="button"
@@ -246,10 +246,12 @@ onBeforeUnmount(() => {
         </button>
       </div>
 
-      <!-- 主体：lg 双栏 -->
-      <div class="mt-4 lg:flex lg:items-start lg:justify-center lg:gap-8">
+      <!-- 主体：lg 双栏。移动端纵向收紧（gap-2），
+           棋盘宽度 = min(容器宽, 视口高-270px)：矮屏设备自动缩小保一屏，
+           dvh 不支持时宽度声明失效，回退为通栏方块（与旧行为一致） -->
+      <div class="mt-2 md:mt-4 lg:flex lg:items-start lg:justify-center lg:gap-8">
         <div
-          class="mx-auto w-full max-w-[440px] md:max-w-[560px] lg:max-w-[520px] flex flex-col gap-4"
+          class="mx-auto w-[min(100%,calc(100dvh_-_270px))] md:w-full max-w-[440px] md:max-w-[560px] lg:max-w-[520px] flex flex-col gap-2 md:gap-4"
         >
           <SudokuBoard
             :size="game.size"

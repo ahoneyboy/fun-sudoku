@@ -20,10 +20,11 @@ const digits = computed(() =>
   Array.from({ length: props.size }, (_, i) => i + 1),
 );
 
-// 列数不能拼字符串（Tailwind JIT 需要字面量），按难度映射写死
+// 列数不能拼字符串（Tailwind JIT 需要字面量），按难度映射写死。
+// 移动端尽量单行铺满（省纵向空间给棋盘），md 起恢复大键位
 const colsClass = computed(() => {
   if (props.size === 4) return 'grid-cols-4';
-  if (props.size === 6) return 'grid-cols-3';
+  if (props.size === 6) return 'grid-cols-6 md:grid-cols-3';
   return 'grid-cols-5 sm:grid-cols-9';
 });
 </script>
@@ -35,13 +36,13 @@ const colsClass = computed(() => {
         v-for="v in digits"
         :key="v"
         type="button"
-        class="flex flex-col items-center justify-center rounded-2xl bg-white py-2 sm:py-2.5 shadow-candy-sm transition-transform duration-200 [transition-timing-function:var(--ease-bounce)] active:scale-90 disabled:pointer-events-none disabled:opacity-40 disabled:scale-90 disabled:translate-y-0.5 cursor-pointer select-none"
+        class="flex flex-col items-center justify-center rounded-2xl bg-white py-1.5 sm:py-2 md:py-2.5 shadow-candy-sm transition-transform duration-200 [transition-timing-function:var(--ease-bounce)] active:scale-90 disabled:pointer-events-none disabled:opacity-40 disabled:scale-90 disabled:translate-y-0.5 cursor-pointer select-none"
         :aria-label="`填入 ${v}`"
         :disabled="remaining[v - 1] <= 0"
         @click="emit('input', v)"
       >
         <span
-          class="text-2xl md:text-3xl font-black leading-none text-azure-deep"
+          class="text-xl sm:text-2xl md:text-3xl font-black leading-none text-azure-deep"
           >{{ v }}</span
         >
         <span class="mt-0.5 text-[10px] md:text-xs font-bold text-ink-soft">

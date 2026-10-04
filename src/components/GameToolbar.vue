@@ -24,12 +24,13 @@ const tools = [
 </script>
 
 <template>
-  <div class="w-full grid grid-cols-3 gap-2 sm:gap-3" role="toolbar" aria-label="游戏工具栏">
+  <!-- 移动端单行 6 键紧凑排布（省纵向空间），md 起恢复 3×2 大按钮 -->
+  <div class="w-full grid grid-cols-6 gap-1.5 md:grid-cols-3 md:gap-3" role="toolbar" aria-label="游戏工具栏">
     <button
       v-for="t in tools"
       :key="t.key"
       type="button"
-      class="relative flex flex-col items-center gap-1 rounded-2xl bg-white py-2.5 sm:py-3 shadow-candy-sm transition-all duration-150 active:translate-y-0.5 active:scale-95 cursor-pointer select-none"
+      class="relative flex flex-col items-center gap-0.5 md:gap-1 rounded-2xl bg-white py-1.5 md:py-3 shadow-candy-sm transition-all duration-150 active:translate-y-0.5 active:scale-95 cursor-pointer select-none"
       :class="{
         'opacity-50': t.key === 'hint' && hintsLeft <= 0,
         'ring-2 ring-lilac-deep bg-lilac-soft': t.key === 'note' && noteMode,
@@ -39,16 +40,16 @@ const tools = [
       @click="emit(t.key)"
     >
       <span
-        class="w-8 h-8 md:w-9 md:h-9 rounded-full flex items-center justify-center"
+        class="w-7 h-7 md:w-9 md:h-9 rounded-full flex items-center justify-center"
         :class="t.tone"
       >
-        <component :is="t.icon" class="w-5 h-5 md:w-6 md:h-6" />
+        <component :is="t.icon" class="w-4 h-4 md:w-6 md:h-6" />
       </span>
-      <span class="text-xs md:text-sm font-bold text-ink">{{ t.label }}</span>
+      <span class="text-[10px] md:text-sm font-bold text-ink">{{ t.label }}</span>
       <!-- 提示剩余次数角标 -->
       <span
         v-if="t.key === 'hint'"
-        class="absolute -top-1.5 -right-1.5 min-w-[20px] h-5 px-1 rounded-full bg-blossom-deep text-white text-[11px] font-black flex items-center justify-center"
+        class="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-blossom-deep text-white text-[10px] md:text-[11px] font-black flex items-center justify-center"
       >
         {{ hintsLeft }}
       </span>
