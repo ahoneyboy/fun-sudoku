@@ -31,21 +31,21 @@ function isActive(to) {
 
 <template>
   <!-- 外层：只负责定位，不拦截手势 -->
-  <div class="fixed inset-x-0 bottom-0 z-40 md:hidden pointer-events-none">
+  <div class="fixed inset-x-2 bottom-1.5 z-40 md:hidden pointer-events-none">
     <nav
-      class="pointer-events-auto bg-white/90 backdrop-blur-md border-t border-[#F0E4D2]"
+      class="pointer-events-auto rounded-[22px] bg-white/90 backdrop-blur-md border border-white/70 shadow-[0_8px_30px_rgba(91,74,84,0.22)]"
       aria-label="底部导航"
     >
-      <div class="grid grid-cols-5 px-1.5">
+      <div class="grid grid-cols-5 px-1">
         <router-link
           v-for="t in tabs"
           :key="t.to"
           :to="t.to"
-          class="flex flex-col items-center gap-0.5 pt-2 text-[10px] font-bold cursor-pointer select-none transition-transform duration-150 active:scale-95"
+          class="flex flex-col items-center gap-0 py-1.5 text-[10px] font-bold cursor-pointer select-none transition-transform duration-150 active:scale-95"
           :class="isActive(t.to) ? 'text-mint-deep' : 'text-ink-soft'"
         >
           <span
-            class="w-10 h-7 flex items-center justify-center rounded-full transition-colors"
+            class="w-9 h-6 flex items-center justify-center rounded-full transition-colors"
             :class="isActive(t.to) ? 'bg-mint-soft' : ''"
           >
             <component :is="t.icon" class="w-5 h-5" />
@@ -53,8 +53,6 @@ function isActive(to) {
           {{ t.label }}
         </router-link>
       </div>
-      <!-- 安全区：小白条/.home indicator 区域并入导航条本体 -->
-      <div class="h-[env(safe-area-inset-bottom)]" />
     </nav>
   </div>
 </template>
