@@ -191,12 +191,18 @@ onBeforeUnmount(() => {
         <div class="card aspect-square animate-pulse bg-[#F7F2FB]" />
       </div>
 
-      <!-- 分支必须是单根节点（Transition 约束）：包一层容器 -->
+      <!-- 分支必须是单根节点（Transition 约束）。
+           移动端分支定高 100dvh-124px（页首留白+页尾滚动区），内部弹性分配：
+           棋盘 flex-1 占满「顶栏+数字键盘之外」的全部剩余高度，格子尽量高；
+           工具栏排在定高区之外，超出屏幕需轻微滚动（按需求约定） -->
       <div v-else key="board" class="w-full">
+      <!-- 定高区：100dvh-80px 内只放 顶栏+棋盘+数字键盘（棋盘 flex-1 撑满剩余高度）；
+           工具栏排到定高区之外，超出屏幕、轻微滚动可达（按需求约定） -->
+      <div class="flex flex-col h-[calc(100dvh_-_80px)] md:h-auto md:block">
       <!-- 顶部信息条：返回 / 难度 / 每日 / 失误 / 计时
            移动端：胶囊不换行、放不下时整枚下沉到第二行（flex-wrap），图标隐藏省宽 -->
       <div
-        class="max-w-[560px] lg:max-w-none mx-auto card px-3 py-2 md:px-5 md:py-3 flex flex-wrap items-center gap-x-1.5 gap-y-1.5 md:gap-x-3 md:gap-y-0"
+        class="shrink-0 max-w-[560px] lg:max-w-none mx-auto card px-3 py-2 md:px-5 md:py-3 flex flex-wrap items-center gap-x-1.5 gap-y-1.5 md:gap-x-3 md:gap-y-0"
       >
         <button
           type="button"
@@ -246,12 +252,10 @@ onBeforeUnmount(() => {
         </button>
       </div>
 
-      <!-- 主体：lg 双栏。移动端纵向收紧（gap-2），
-           棋盘宽度 = min(容器宽, 视口高-270px)：矮屏设备自动缩小保一屏，
-           dvh 不支持时宽度声明失效，回退为通栏方块（与旧行为一致） -->
-      <div class="mt-2 md:mt-4 lg:flex lg:items-start lg:justify-center lg:gap-8">
+      <!-- 主体：lg 双栏。移动端纵向弹性：棋盘 flex-1 撑满剩余高度 -->
+      <div class="mt-2 flex min-h-0 flex-1 flex-col md:mt-4 lg:flex lg:flex-row lg:items-start lg:justify-center lg:gap-8">
         <div
-          class="mx-auto w-[min(100%,calc(100dvh_-_270px))] md:w-full max-w-[440px] md:max-w-[560px] lg:max-w-[520px] flex flex-col gap-2 md:gap-4"
+          class="mx-auto flex min-h-0 w-full max-w-[440px] flex-1 flex-col gap-2 md:max-w-[560px] lg:max-w-[520px] md:gap-4"
         >
           <SudokuBoard
             :size="game.size"
@@ -270,6 +274,7 @@ onBeforeUnmount(() => {
             @input="game.inputDigit($event)"
           />
           <GameToolbar
+            class="hidden md:grid"
             :hints-left="game.hintsLeft"
             :note-mode="game.noteMode"
             :can-undo="game.canUndo"
@@ -336,6 +341,22 @@ onBeforeUnmount(() => {
             </p>
           </div>
         </aside>
+      </div>
+      </div>
+
+      <!-- 移动端工具栏：排在定高区之外（超出屏幕、轻微滚动可达）；md 起隐藏，用列内工具栏 -->
+      <div class="mt-2 md:hidden">
+        <GameToolbar
+          :hints-left="game.hintsLeft"
+          :note-mode="game.noteMode"
+          :can-undo="game.canUndo"
+          @hint="onHint"
+          @note="game.toggleNoteMode()"
+          @erase="game.eraseCell()"
+          @undo="game.undo()"
+          @reset="onReset"
+          @check="game.runCheck()"
+        />
       </div>
       </div>
     </Transition>

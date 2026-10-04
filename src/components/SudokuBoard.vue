@@ -2,9 +2,12 @@
 /**
  * 数独棋盘（单层扁平 grid 实现）
  *
+ * 【布局】移动端棋盘高≠宽：高度 = min(2/3 宽, 视口高-180px)，
+ * 配合下方数字键盘一屏同框，格子为「高 ≥ 宽」的矩形（阅读/点按更友好）；
+ * md 起（宽屏双栏）恢复正方形。
+ *
  * 【动效设计】
  * - 用户数字：Vue Transition name="num"（enter=弹性落格 / leave=缩小上浮淡出），
- *   覆盖重填时旧数字飞出 + 新数字落下同帧进行；
  *   数字 span 以 user 值为 key，每次改值都会重放入场动画。
  * - 格子：用户填数后加 .cell-fill-pop（外圈淡蓝涟漪，伪元素一次性动画）；
  * - 选中格：.animate-breath-glow（2s 呼吸光晕，opacity 脉动伪元素）；
@@ -208,13 +211,17 @@ watch(() => props.size, () => measure());
 <template>
   <div
     ref="boardEl"
-    class="w-full rounded-[22px] bg-[#CDB9F0] p-[5px] shadow-[0_10px_24px_rgba(122,85,192,0.18)]"
+    class="flex min-h-0 w-full flex-1 flex-col rounded-[22px] bg-[#CDB9F0] p-[5px] shadow-[0_10px_24px_rgba(122,85,192,0.18)]"
     role="grid"
     :aria-label="`${size}宫数独棋盘`"
   >
-    <!-- 单层 grid：行列均分且 minmax(0,1fr) 封死最小尺寸，格子恒为正方形 -->
+    <!-- 单层 grid：行列均分且 minmax(0,1fr) 封死最小尺寸。
+         移动端：h-full 跟随父级弹性高度（棋盘 flex-1 撑满顶栏与数字键盘之外的
+         剩余屏幕），格子为「高 ≥ 宽」的矩形，尽量大、便于阅读点按；
+         min-h 300px 兜底父级高度不确定的旧环境；
+         md 起（双栏/宽屏）恢复正方形 -->
     <div
-      class="grid aspect-square w-full gap-0 rounded-[17px] bg-[#F3EDFC]"
+      class="grid h-full min-h-[300px] w-full gap-0 rounded-[17px] bg-[#F3EDFC] md:h-auto md:min-h-0 md:aspect-square"
       :style="{
         gridTemplateColumns: `repeat(${size}, minmax(0, 1fr))`,
         gridTemplateRows: `repeat(${size}, minmax(0, 1fr))`,
