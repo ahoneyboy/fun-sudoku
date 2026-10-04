@@ -1,6 +1,9 @@
 <script setup>
 /**
- * 底部 TabBar（手机端，<md 显示）：5 个入口 + 刘海屏安全区适配
+ * 底部导航（手机端，<md 显示）：悬浮胶囊样式
+ * - 悬浮于底部，与屏幕边缘留出间距，圆角 + 毛玻璃 + 大投影
+ * - bottom 偏移含 iOS 安全区（env(safe-area-inset-bottom)），刘海/小白条不遮挡
+ * - pointer-events 分层：外层容器不拦截点击，胶囊本体可点
  */
 import { useRoute } from 'vue-router';
 import {
@@ -27,26 +30,31 @@ function isActive(to) {
 </script>
 
 <template>
-  <nav
-    class="fixed bottom-0 inset-x-0 z-40 md:hidden bg-white/95 backdrop-blur border-t border-[#F0E4D2]"
-    aria-label="底部导航"
+  <!-- 外层：只负责定位，不拦截手势 -->
+  <div
+    class="fixed inset-x-3 bottom-[calc(10px_+_env(safe-area-inset-bottom))] z-40 md:hidden pointer-events-none"
   >
-    <div class="grid grid-cols-5 pb-[env(safe-area-inset-bottom)]">
-      <router-link
-        v-for="t in tabs"
-        :key="t.to"
-        :to="t.to"
-        class="flex flex-col items-center gap-0.5 pt-2 pb-1.5 text-[10px] font-bold cursor-pointer select-none"
-        :class="isActive(t.to) ? 'text-mint-deep' : 'text-ink-soft'"
-      >
-        <span
-          class="w-10 h-7 flex items-center justify-center rounded-full transition-colors"
-          :class="isActive(t.to) ? 'bg-mint-soft' : ''"
+    <nav
+      class="pointer-events-auto rounded-[26px] bg-white/90 backdrop-blur-md border border-white/70 shadow-[0_10px_30px_rgba(91,74,84,0.25)]"
+      aria-label="底部导航"
+    >
+      <div class="grid grid-cols-5 px-1.5">
+        <router-link
+          v-for="t in tabs"
+          :key="t.to"
+          :to="t.to"
+          class="flex flex-col items-center gap-0.5 py-2 text-[10px] font-bold cursor-pointer select-none transition-transform duration-150 active:scale-95"
+          :class="isActive(t.to) ? 'text-mint-deep' : 'text-ink-soft'"
         >
-          <component :is="t.icon" class="w-5 h-5" />
-        </span>
-        {{ t.label }}
-      </router-link>
-    </div>
-  </nav>
+          <span
+            class="w-10 h-7 flex items-center justify-center rounded-full transition-colors"
+            :class="isActive(t.to) ? 'bg-mint-soft' : ''"
+          >
+            <component :is="t.icon" class="w-5 h-5" />
+          </span>
+          {{ t.label }}
+        </router-link>
+      </div>
+    </nav>
+  </div>
 </template>
