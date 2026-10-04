@@ -31,11 +31,9 @@ function isActive(to) {
 
 <template>
   <!-- 外层：只负责定位，不拦截手势 -->
-  <div
-    class="fixed inset-x-3 bottom-[calc(10px_+_env(safe-area-inset-bottom))] z-40 md:hidden pointer-events-none"
-  >
+  <div class="fixed inset-x-0 bottom-0 z-40 md:hidden pointer-events-none">
     <nav
-      class="pointer-events-auto rounded-[26px] bg-white/90 backdrop-blur-md border border-white/70 shadow-[0_10px_30px_rgba(91,74,84,0.25)]"
+      class="pointer-events-auto rounded-t-[26px] bg-white/90 backdrop-blur-md border-t border-x border-white/70 shadow-[0_-8px_30px_rgba(91,74,84,0.18)]"
       aria-label="底部导航"
     >
       <div class="grid grid-cols-5 px-1.5">
@@ -43,7 +41,7 @@ function isActive(to) {
           v-for="t in tabs"
           :key="t.to"
           :to="t.to"
-          class="flex flex-col items-center gap-0.5 py-2 text-[10px] font-bold cursor-pointer select-none transition-transform duration-150 active:scale-95"
+          class="flex flex-col items-center gap-0.5 pt-2 text-[10px] font-bold cursor-pointer select-none transition-transform duration-150 active:scale-95"
           :class="isActive(t.to) ? 'text-mint-deep' : 'text-ink-soft'"
         >
           <span
@@ -55,6 +53,8 @@ function isActive(to) {
           {{ t.label }}
         </router-link>
       </div>
+      <!-- 安全区：小白条/.home indicator 区域并入导航条本体 -->
+      <div class="h-[env(safe-area-inset-bottom)]" />
     </nav>
   </div>
 </template>
